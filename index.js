@@ -2,25 +2,11 @@ require('dotenv').config();
 const express = require('express');
 const crypto = require('crypto');
 const axios = require('axios');
-const sqlite3 = require('sqlite3').verbose();
-
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Database setup
-const db = new sqlite3.Database('./sync_records.db');
-
-// Initialize database
-db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS sync_records (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    shopify_order_id TEXT UNIQUE,
-    quickbooks_transaction_id TEXT,
-    transaction_type TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    status TEXT DEFAULT 'pending'
-  )`);
-});
+// In-memory database replacement
+const syncRecords = new Map();
 
 // Middleware
 app.use(express.raw({ type: 'application/json' }));
@@ -40,30 +26,20 @@ function verifyShopifyWebhook(data, hmacHeader) {
 
 // Check if order already synced
 function checkIfSynced(shopifyOrderId) {
-  return new Promise((resolve, reject) => {
-    db.get(
-      'SELECT * FROM sync_records WHERE shopify_order_id = ?',
-      [shopifyOrderId],
-      (err, row) => {
-        if (err) reject(err);
-        else resolve(row);
-      }
-    );
-  });
+  return Promise.resolve(syncRecords.get(shopifyOrderId));
 }
 
 // Save sync record
 function saveSyncRecord(shopifyOrderId, quickbooksId, transactionType, status = 'completed') {
-  return new Promise((resolve, reject) => {
-    db.run(
-      'INSERT OR REPLACE INTO sync_records (shopify_order_id, quickbooks_transaction_id, transaction_type, status) VALUES (?, ?, ?, ?)',
-      [shopifyOrderId, quickbooksId, transactionType, status],
-      function(err) {
-        if (err) reject(err);
-        else resolve(this.lastID);
-      }
-    );
-  });
+  const record = {
+    shopify_order_id: shopifyOrderId,
+    quickbooks_transaction_id: quickbooksId,
+    transaction_type: transactionType,
+    status: status,
+    created_at: new Date().toISOString()
+  };
+  syncRecords.set(shopifyOrderId, record);
+  return Promise.resolve(record);
 }
 
 // QuickBooks API helper
@@ -349,12 +325,5 @@ app.listen(PORT, () => {
 // Graceful shutdown
 process.on('SIGINT', () => {
   console.log('Shutting down gracefully...');
-  db.close((err) => {
-    if (err) {
-      console.error('Error closing database:', err);
-    } else {
-      console.log('Database connection closed.');
-    }
-    process.exit(0);
-  });
+  process.exit(0);
 });
