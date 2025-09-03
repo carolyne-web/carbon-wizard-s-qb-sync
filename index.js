@@ -44,8 +44,13 @@ function saveSyncRecord(shopifyOrderId, quickbooksId, transactionType, status = 
 
 // QuickBooks API helper
 function getQuickBooksHeaders() {
-  // Clean the access token by removing any whitespace/newlines
-  const cleanToken = process.env.QUICKBOOKS_ACCESS_TOKEN?.replace(/\s+/g, '') || '';
+  // Clean the access token by removing any whitespace, newlines, and non-printable characters
+  const rawToken = process.env.QUICKBOOKS_ACCESS_TOKEN || '';
+  const cleanToken = rawToken.replace(/[\r\n\t\s]/g, '').replace(/[^\x20-\x7E]/g, '');
+  
+  console.log('Raw token length:', rawToken.length);
+  console.log('Clean token length:', cleanToken.length);
+  console.log('Token starts with:', cleanToken.substring(0, 20));
   
   return {
     'Authorization': `Bearer ${cleanToken}`,
