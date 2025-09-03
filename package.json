@@ -1,0 +1,23 @@
+{
+  "name": "shopify-quickbooks-sync",
+  "version": "1.0.0",
+  "description": "Shopify to QuickBooks Online integration for B2B orders",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "register-webhook": "node registerWebhook.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.2",
+    "dotenv": "^16.3.1",
+    "sqlite3": "^5.1.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
